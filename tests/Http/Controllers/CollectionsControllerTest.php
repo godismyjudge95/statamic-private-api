@@ -26,6 +26,18 @@ it('gets collections', function () {
     $this->assertCount(2, $json['data']);
 });
 
+it('ignores filters on collections', function () {
+    tap(Facades\Collection::make('test1'))->save();
+    tap(Facades\Collection::make('test2'))->save();
+
+    $this->actingAs(makeUser());
+
+    $response = $this->get(route('private.collections.index', ['filter[handle:is]' => 'test2']));
+
+    $response->assertOk();
+    $this->assertCount(2, $response->json('data'));
+});
+
 it('respects collection restrictions', function () {
     app('config')->set('private-api.resources.collections', ['none' => true]);
 

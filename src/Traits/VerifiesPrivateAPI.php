@@ -2,6 +2,7 @@
 
 namespace Tv2regionerne\StatamicPrivateApi\Traits;
 
+use Facades\Statamic\API\FilterAuthorizer;
 use Illuminate\Validation\ValidationException;
 
 trait VerifiesPrivateAPI
@@ -43,12 +44,22 @@ trait VerifiesPrivateAPI
         ], 422);
     }
 
-    protected function allowedFilters()
+    /**
+     * Read allowed_filters from config/private-api.php. If it is not set there,
+     * read config/statamic/api.php (the behaviour before this config existed).
+     */
+    protected function privateApiAllowedFilters(string $resource, ?string $handle = null): array
     {
-        $config = config("private-api.resources.{$this->resourceConfigKey}.allowed_filters");
+        $key = collect(['private-api.resources', $resource, $handle, 'allowed_filters'])->filter()->join('.');
 
-        return collect(is_array($config) ? $config : [])
-            ->reject(fn ($field) => in_array($field, ['password', 'password_hash']))
-            ->all();
+        if (config()->has($key)) {
+            $config = config($key);
+
+            return is_array($config) ? $config : [];
+        }
+
+        return $handle
+            ? FilterAuthorizer::allowedForSubResources('api', $resource, $handle)
+            : FilterAuthorizer::allowedForResource('api', $resource);
     }
 }

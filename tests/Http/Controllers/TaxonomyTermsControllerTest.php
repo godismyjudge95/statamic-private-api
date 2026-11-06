@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Event;
 use Statamic\Facades;
 
@@ -26,6 +27,24 @@ it('gets terms', function () {
     $json = $response->json();
 
     $this->assertCount(2, $json['data']);
+});
+
+it('gets filtered terms', function () {
+    $taxonomy = tap(Facades\Taxonomy::make('test'))->save();
+
+    tap(Facades\Term::make()->taxonomy($taxonomy)->inDefaultLocale()->slug('test1')->data(['title' => 'One']))->save();
+    tap(Facades\Term::make()->taxonomy($taxonomy)->inDefaultLocale()->slug('test2')->data(['title' => 'Two']))->save();
+
+    $this->actingAs(makeUser());
+
+    $url = route('private.taxonomies.terms.index', ['taxonomy' => 'test', 'filter[title:is]' => 'Two']);
+
+    // If no config allows the filter
+    $this->get($url)->assertStatus(422);
+
+    // If config/private-api.php allows the filter
+    Config::set('private-api.resources.taxonomies', ['test' => ['allowed_filters' => ['title']]]);
+    $this->assertSame('test2', collect($this->get($url)->json('data'))->pluck('slug')->join('|'));
 });
 
 it('doesnt get terms from a missing taxonony', function () {

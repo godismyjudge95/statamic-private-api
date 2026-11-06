@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Statamic\Facades;
@@ -30,6 +31,31 @@ it('gets assets', function () {
     $json = $response->json();
 
     $this->assertCount(2, $json['data']);
+});
+
+it('gets filtered assets', function () {
+    Storage::fake('test');
+
+    $container = tap(Facades\AssetContainer::make('test')->disk('test'))->save();
+
+    tap(Facades\Asset::make()->path('test1')->container($container))->save();
+    tap(Facades\Asset::make()->path('test2')->container($container))->save();
+
+    $this->actingAs(makeUser());
+
+    $url = route('private.asset-containers.assets.index', ['asset_container' => 'test', 'filter[path:is]' => 'test2']);
+
+    // If no config allows the filter
+    $this->get($url)->assertStatus(422);
+
+    // If config/private-api.php allows the filter
+    Config::set('private-api.resources.assets', ['test' => ['allowed_filters' => ['path']]]);
+    $this->assertSame('test::test2', collect($this->get($url)->json('data'))->pluck('id')->join('|'));
+
+    // If only config/statamic/api.php allows the filter (fallback)
+    Config::set('private-api.resources.assets', ['test' => true]);
+    Config::set('statamic.api.resources.assets', ['test' => ['allowed_filters' => ['path']]]);
+    $this->assertSame('test::test2', collect($this->get($url)->json('data'))->pluck('id')->join('|'));
 });
 
 it('doesnt get entries from a missing container', function () {

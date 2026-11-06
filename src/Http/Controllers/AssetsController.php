@@ -2,7 +2,6 @@
 
 namespace Tv2regionerne\StatamicPrivateApi\Http\Controllers;
 
-use Facades\Statamic\API\FilterAuthorizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Testing\MimeType;
 use Illuminate\Http\UploadedFile;
@@ -203,6 +202,6 @@ class AssetsController extends ApiController
 
     protected function allowedFilters()
     {
-        return FilterAuthorizer::allowedForSubResources('api', 'assets', $this->containerHandle);
+        return $this->privateApiAllowedFilters('assets', $this->containerHandle);
     }
 }

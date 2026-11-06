@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Event;
 use Statamic\Facades;
 
@@ -26,6 +27,33 @@ it('gets entries', function () {
     $json = $response->json();
 
     $this->assertCount(2, $json['data']);
+});
+
+it('gets filtered entries', function () {
+    $collection = tap(Facades\Collection::make('test'))->save();
+
+    tap(Facades\Entry::make()->id('test1')->collection($collection)->data(['title' => 'One']))->save();
+    tap(Facades\Entry::make()->id('test2')->collection($collection)->data(['title' => 'Two']))->save();
+
+    $this->actingAs(makeUser());
+
+    $url = route('private.collections.entries.index', ['collection' => 'test', 'filter[title:is]' => 'Two']);
+
+    // If no config allows the filter
+    $this->get($url)->assertStatus(422);
+
+    // If config/private-api.php allows the filter
+    Config::set('private-api.resources.collections', ['test' => ['allowed_filters' => ['title']]]);
+    $this->assertSame('test2', collect($this->get($url)->json('data'))->pluck('id')->join('|'));
+
+    // If only config/statamic/api.php allows the filter (fallback)
+    Config::set('private-api.resources.collections', ['test' => true]);
+    Config::set('statamic.api.resources.collections', ['test' => ['allowed_filters' => ['title']]]);
+    $this->assertSame('test2', collect($this->get($url)->json('data'))->pluck('id')->join('|'));
+
+    // config/private-api.php has priority over config/statamic/api.php
+    Config::set('private-api.resources.collections', ['test' => ['allowed_filters' => []]]);
+    $this->get($url)->assertStatus(422);
 });
 
 it('doesnt get entries from a missing collection', function () {

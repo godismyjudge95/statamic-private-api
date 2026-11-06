@@ -14,9 +14,12 @@ class TaxonomyTermsController extends ApiController
 {
     use VerifiesPrivateAPI;
 
+    protected $taxonomyHandle;
+
     public function index($taxonomy)
     {
         $taxonomy = $this->taxonomyFromHandle($taxonomy);
+        $this->taxonomyHandle = $taxonomy->handle();
 
         $with = $taxonomy->termBlueprints()
             ->flatMap(fn ($blueprint) => $blueprint->fields()->all())
@@ -112,5 +115,10 @@ class TaxonomyTermsController extends ApiController
         }
 
         return $term;
+    }
+
+    protected function allowedFilters()
+    {
+        return $this->privateApiAllowedFilters('taxonomies', $this->taxonomyHandle);
     }
 }

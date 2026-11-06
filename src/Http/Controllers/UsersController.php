@@ -15,11 +15,9 @@ class UsersController extends ApiController
 {
     use VerifiesPrivateAPI;
 
-    protected $resourceConfigKey = 'users';
-
     public function index()
     {
-        abort_if(! $this->resourcesAllowed($this->resourceConfigKey, ''), 404);
+        abort_if(! $this->resourcesAllowed('users', ''), 404);
 
         $this->authorize('index', User::class);
 
@@ -30,7 +28,7 @@ class UsersController extends ApiController
 
     public function show($id)
     {
-        abort_if(! $this->resourcesAllowed($this->resourceConfigKey, ''), 404);
+        abort_if(! $this->resourcesAllowed('users', ''), 404);
 
         if (! $user = Facades\User::find($id)) {
             abort(404);
@@ -60,7 +58,7 @@ class UsersController extends ApiController
 
     public function update(Request $request, $id)
     {
-        abort_if(! $this->resourcesAllowed($this->resourceConfigKey, ''), 404);
+        abort_if(! $this->resourcesAllowed('users', ''), 404);
 
         if (! $user = Facades\User::find($id)) {
             abort(404);
@@ -83,7 +81,7 @@ class UsersController extends ApiController
 
     public function destroy(Request $request, $id)
     {
-        abort_if(! $this->resourcesAllowed($this->resourceConfigKey, ''), 404);
+        abort_if(! $this->resourcesAllowed('users', ''), 404);
 
         if (! $user = Facades\User::find($id)) {
             abort(404);
@@ -94,5 +92,12 @@ class UsersController extends ApiController
         Facades\User::delete($user);
 
         return response('', 204);
+    }
+
+    protected function allowedFilters()
+    {
+        return collect($this->privateApiAllowedFilters('users'))
+            ->reject(fn ($field) => in_array($field, ['password', 'password_hash']))
+            ->all();
     }
 }

@@ -73,6 +73,27 @@ PRIVATE_API_ENABLED=true
 PRIVATE_API_ROUTE="api/private"
 ```
 
+## Filtering
+Users, collection entries, taxonomy terms and assets can be filtered the same way as the Statamic REST API: https://statamic.dev/rest-api#filtering  
+For security, no filters are allowed by default. Enable them per resource with `allowed_filters` in `config/private-api.php`:
+```php
+    'resources' => [
+        'collections' => [
+            'articles' => ['allowed_filters' => ['title', 'status']],
+        ],
+        'taxonomies' => [
+            'tags' => ['allowed_filters' => ['title']],
+        ],
+        'assets' => [
+            'images' => ['allowed_filters' => ['path']],
+        ],
+        'users' => [
+            'allowed_filters' => ['email'],
+        ],
+    ],
+```
+If a resource has no `allowed_filters` in `config/private-api.php`, the `allowed_filters` from `config/statamic/api.php` are used.
+
 
 ## Addon endpoints in private API
 Other addons can register their private API endpoints in the private API.  
