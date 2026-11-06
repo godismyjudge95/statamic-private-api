@@ -56,7 +56,8 @@ class AssetsController extends ApiController
         $request->merge([
             'container' => $container,
         ]);
-        $this->authorize('store', $container);
+
+        $this->authorize('store', [AssetContract::class, $this->containerFromHandle($container)]);
 
         if ($file = $request->input('file_url')) {
             $contents = file_get_contents($file);
@@ -82,7 +83,7 @@ class AssetsController extends ApiController
             // Check mimetype of the file and detect extension for the file
             $mimetype = mime_content_type($tmpPath);
             $mimetypes = new MimeTypes();
-            $extension = collect($mimetypes->getExtensions($mimetypes->guessMimeType(storage_path('tmp/'.$tmpPath))))->first();
+            $extension = collect($mimetypes->getExtensions($mimetypes->guessMimeType($tmpPath)))->first();
 
             // Create filename if not set through request
             $filename ??= $this->sanitizeFilename($tmpFilename, $extension);

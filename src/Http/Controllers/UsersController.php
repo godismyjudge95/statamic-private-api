@@ -21,7 +21,7 @@ class UsersController extends ApiController
     {
         abort_if(! $this->resourcesAllowed($this->resourceConfigKey, ''), 404);
 
-        $this->authorize('view', [User::class]);
+        $this->authorize('index', User::class);
 
         return app(UserResource::class)::collection(
             $this->filterSortAndPaginate(Facades\User::query())
@@ -67,9 +67,9 @@ class UsersController extends ApiController
         }
 
         try {
-            $data = $this->show($id)->toArray($request);
-
-            $mergedData = collect($data)->merge($request->all());
+            $mergedData = $user->data()
+                ->merge(['email' => $user->email()])
+                ->merge($request->all());
 
             $request->merge($mergedData->all());
 

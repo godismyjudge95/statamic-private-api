@@ -49,6 +49,14 @@ it('gets filtered users', function () {
     $this->assertSame('test@test2.com', collect($json['data'])->pluck('email')->join('|'));
 });
 
+it('forbids listing users without permission', function () {
+    $user = tap(Facades\User::make()->email('unauthorized@test.com'))->save();
+
+    $this->actingAs($user);
+
+    $this->get(route('private.users.index'))->assertForbidden();
+});
+
 it('gets individual users', function () {
     $user = tap(Facades\User::make()->email('test@test2.com'))->save();
 
@@ -134,4 +142,62 @@ it('updates a user', function () {
     $response->json();
 
     $this->assertSame('Tester', Facades\User::find($user->id())->name());
+});
+
+it('preserves roles omitted from a user update', function () {
+    Event::fake();
+
+    $this->actingAs(makeUser());
+
+    $user = tap(
+        Facades\User::make()
+            ->email('test@test2.com')
+            ->set('name', 'Test')
+            ->set('roles', ['editor'])
+    )->save();
+
+    $this->patch(route('private.users.update', ['id' => $user->id()]), [
+        'name' => 'Tester',
+    ])->assertOk();
+
+    $user = Facades\User::find($user->id());
+
+    $this->assertSame('Tester', $user->name());
+    $this->assertSame(['editor'], $user->get('roles'));
+});
+
+it('replaces roles included in a user update', function () {
+    Event::fake();
+
+    $this->actingAs(makeUser());
+
+    $user = tap(
+        Facades\User::make()
+            ->email('test@test2.com')
+            ->set('roles', ['editor'])
+    )->save();
+
+    $this->patch(route('private.users.update', ['id' => $user->id()]), [
+        'roles' => ['author'],
+    ])->assertOk();
+
+    $this->assertSame(['author'], Facades\User::find($user->id())->get('roles'));
+});
+
+it('clears roles explicitly in a user update', function () {
+    Event::fake();
+
+    $this->actingAs(makeUser());
+
+    $user = tap(
+        Facades\User::make()
+            ->email('test@test2.com')
+            ->set('roles', ['editor'])
+    )->save();
+
+    $this->patch(route('private.users.update', ['id' => $user->id()]), [
+        'roles' => [],
+    ])->assertOk();
+
+    $this->assertEmpty(Facades\User::find($user->id())->get('roles'));
 });
